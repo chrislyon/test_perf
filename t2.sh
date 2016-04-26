@@ -39,6 +39,9 @@ create_user_perf()
 	default tablespace PERF
 	quota unlimited on PERF;
 	alter user perf identified by tiger ACCOUNT UNLOCK;
+	grant create session to perf;
+	grant select any table to perf;
+	grant create table to perf;
 !!
 }
 
@@ -56,14 +59,26 @@ log()
 	printf "%s : %s\n" "$ts" "$1"
 }
 
+create_table_perf()
+{
+	sqlplus $CNX_BASE <<!!
+	connect perf/tiger
+	create table perf_table as select * from SEED.POSCOD;
+	select count(*) from perf_table;
+!!
+}
+
 log "debut du traitement"
-log "Flush base"
-flush_base
+>log/create.log
 log "drop user perf"
 drop_user_perf
 log "create TBS perf"
-create_TBS_perf
+create_TBS_perf 2>&1 >>log/create.log
 log "create user perf"
-create_user_perf
+create_user_perf 2>&1 >>log/create.log
+log "Flush base"
+flush_base 2>&1 >>log/create.log
+log "==> Debut du test"
+time create_table_perf
 log "Fin   du traitement"
 
